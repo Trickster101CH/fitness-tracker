@@ -639,13 +639,17 @@ function logSet() {
       showToast('20 Mini-Set Reps erreicht! ✓');
       renderWorkoutState();
     } else {
-      // If ≥8 reps in this mini-set → suggest +2.5kg for next mini-set
+      // If ≥8 reps in this mini-set → adjust weight for next mini-set
       if (woCurrentReps >= RULES.weightUpThreshold) {
         const exId = activeWorkout.exercises[activeWorkout.exerciseIndex];
         const ex = EXERCISES[exId];
         const delta = ex.invertProgress ? -2.5 : 2.5;
         woCurrentWeight = Math.max(0, +(woCurrentWeight + delta).toFixed(1));
-        showToast(`${woCurrentReps} Reps → Gewicht auf ${woCurrentWeight}kg erhöht!`);
+        if (ex.invertProgress) {
+          showToast(`${woCurrentReps} Reps → Unterstützung auf ${woCurrentWeight}kg reduziert!`);
+        } else {
+          showToast(`${woCurrentReps} Reps → Gewicht auf ${woCurrentWeight}kg erhöht!`);
+        }
       }
       const remaining = RULES.miniSetRepsTarget - activeWorkout.miniSetTotal;
       woCurrentReps = Math.min(4, remaining);
