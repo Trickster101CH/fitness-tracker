@@ -399,3 +399,88 @@ body {
   font-size: 14px; cursor: pointer; padding: 8px;
 }
 .end-workout-btn:focus-visible { outline: 2px solid var(--red); border-radius: 4px; }
+
+/* ========== UNDO BUTTON ========== */
+.btn-undo {
+  width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 12px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  background: none; color: var(--text-dim); margin-top: 8px;
+  transition: all .2s;
+}
+.btn-undo:hover { border-color: var(--red); color: var(--red); }
+.btn-undo:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2px; }
+
+/* ========== CALENDAR HEATMAP ========== */
+.heatmap-wrapper { overflow-x: auto; padding-bottom: 8px; }
+.heatmap {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-flow: column;
+  gap: 3px;
+}
+.heatmap-day {
+  width: 18px; height: 18px; border-radius: 3px;
+  background: var(--surface2);
+}
+.heatmap-day.level-1 { background: rgba(108,92,231,.3); }
+.heatmap-day.level-2 { background: rgba(108,92,231,.55); }
+.heatmap-day.level-3 { background: rgba(108,92,231,.8); }
+.heatmap-day.today { outline: 2px solid var(--accent-light); outline-offset: -1px; }
+.heatmap-labels {
+  display: flex; gap: 3px; margin-bottom: 6px;
+  font-size: 10px; color: var(--text-dim);
+}
+.heatmap-day-labels {
+  display: grid; grid-template-rows: repeat(7, 1fr);
+  gap: 3px; margin-right: 6px; font-size: 9px; color: var(--text-dim);
+}
+.heatmap-day-labels span {
+  height: 18px; display: flex; align-items: center;
+}
+.heatmap-legend {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: 10px; font-size: 10px; color: var(--text-dim);
+}
+.heatmap-legend .swatch {
+  width: 12px; height: 12px; border-radius: 2px;
+}
+.heatmap-month-labels {
+  display: flex; font-size: 10px; color: var(--text-dim); margin-bottom: 4px;
+}
+.heatmap-month-labels span { min-width: 21px; }
+
+/* ========== EXERCISE MANAGEMENT ========== */
+.exercise-manage-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; background: var(--surface2); border-radius: 10px;
+  margin-bottom: 8px;
+}
+.exercise-manage-info { flex: 1; }
+.exercise-manage-name { font-size: 14px; font-weight: 600; }
+.exercise-manage-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.exercise-manage-actions { display: flex; gap: 6px; }
+.exercise-manage-actions .icon-btn { font-size: 16px; padding: 6px; }
+.workout-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 6px;
+  font-size: 10px; font-weight: 700; margin-right: 6px;
+}
+.workout-badge-a { background: rgba(108,92,231,.2); color: var(--accent-light); }
+.workout-badge-b { background: rgba(0,184,148,.2); color: var(--green); }
+
+/* ========== ADD/EDIT EXERCISE MODAL ========== */
+.modal-wide { max-width: 420px; }
+.modal-wide .form-group { text-align: left; }
+.form-grid-2 { grid-template-columns: 1fr 1fr; }
+.form-row { display: flex; gap: 10px; align-items: end; }
+.form-row .form-group { flex: 1; }
+.checkbox-group {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px; background: var(--surface2); border-radius: 8px;
+  cursor: pointer; font-size: 14px;
+}
+.checkbox-group input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--accent);
+}
+
+/* ========== SELECT TEXT-ALIGN FIX ========== */
+.form-group select { text-align: left; }

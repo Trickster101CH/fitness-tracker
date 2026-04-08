@@ -19,21 +19,34 @@ function playTimerSignal() {
 }
 
 // ========== EXERCISE & PLAN DATA ==========
-const EXERCISES = {
-  // Workout A
+const DEFAULT_EXERCISES = {
   incline_db:      { name: 'Incline Dumbbell Press', workout: 'A', order: 1, ss: 20, current: 22, icon: '🏋️', invertProgress: false },
   barbell_row:     { name: 'Barbell Row',            workout: 'A', order: 2, ss: 10, current: 15, icon: '🏋️', invertProgress: false },
   db_high_pull:    { name: 'Dumbbell High Pull Ups', workout: 'A', order: 3, ss: 12, current: 12, icon: '💪', invertProgress: false },
   pjr_pullover:    { name: 'PJR Pull Overs',         workout: 'A', order: 4, ss: 18, current: 24, icon: '🏋️', invertProgress: false },
   goblet_squat:    { name: 'Goblet Squats',          workout: 'A', order: 5, ss: 12, current: 12, icon: '🦵', invertProgress: false },
   barbell_rdl:     { name: 'Barbell RDL',             workout: 'A', order: 6, ss: 10, current: 15, icon: '🦵', invertProgress: false },
-  // Workout B
   dips:            { name: 'Dips (Assisted)',         workout: 'B', order: 1, ss: 75, current: 54, icon: '💪', invertProgress: true },
   cable_row_1arm:  { name: 'One Arm High Cable Row',  workout: 'B', order: 2, ss: 30, current: 45, icon: '🏋️', invertProgress: false },
   cable_lateral:   { name: 'Cable Lateral Raise',     workout: 'B', order: 3, ss: 7,  current: 16, icon: '🔄', invertProgress: false },
   barbell_curl:    { name: 'Barbell Curls',           workout: 'B', order: 4, ss: 7.5, current: 10, icon: '💪', invertProgress: false },
   tricep_pushdown: { name: 'Tricep Cable Push Down',  workout: 'B', order: 5, ss: 40, current: 60, icon: '💪', invertProgress: false },
 };
+
+// Dynamic exercises — loaded from localStorage, falls back to defaults
+let EXERCISES = loadExercises();
+
+function loadExercises() {
+  try {
+    const saved = localStorage.getItem('fittrack_exercises');
+    if (saved) return JSON.parse(saved);
+  } catch (e) { /* ignore */ }
+  return JSON.parse(JSON.stringify(DEFAULT_EXERCISES));
+}
+
+function saveExercises() {
+  try { localStorage.setItem('fittrack_exercises', JSON.stringify(EXERCISES)); } catch (e) { /* ignore */ }
+}
 
 const RULES = {
   startSetTarget: 12,      // target reps for start set
@@ -244,14 +257,16 @@ function renderDashboard() {
 
   const sel = document.getElementById('workout-selector');
   const isNextA = meta.nextWorkout === 'A';
+  const countA = Object.values(EXERCISES).filter(e => e.workout === 'A').length;
+  const countB = Object.values(EXERCISES).filter(e => e.workout === 'B').length;
   sel.innerHTML = `
     <div class="wo-btn ${isNextA ? 'active next-badge' : ''}" onclick="selectWorkout('A')" role="radio" aria-checked="${isNextA}" tabindex="0">
       <div class="wo-btn-label wo-btn-label-a">A</div>
-      <div class="wo-btn-sub">6 Übungen</div>
+      <div class="wo-btn-sub">${countA} Übungen</div>
     </div>
     <div class="wo-btn ${!isNextA ? 'active next-badge' : ''}" onclick="selectWorkout('B')" role="radio" aria-checked="${!isNextA}" tabindex="0">
       <div class="wo-btn-label wo-btn-label-b">B</div>
-      <div class="wo-btn-sub">5 Übungen</div>
+      <div class="wo-btn-sub">${countB} Übungen</div>
     </div>`;
 
   renderExerciseList('A', 'exercises-a');
@@ -271,6 +286,8 @@ function renderDashboard() {
   document.getElementById('stat-prs').textContent = increases;
 
   document.getElementById('stat-streak').textContent = calculateStreak();
+
+  renderHeatmap();
 }
 
 function calculateStreak() {
@@ -339,7 +356,7 @@ function selectWorkout(w) {
 }
 
 // ========== EXERCISE DETAIL ==========
-let weightChart = null, repsChart = null;
+let weightChart = null, repsChart = null, volumeChart = null;
 let currentDetailExId = null;
 
 function showExerciseDetail(exId) {
@@ -396,6 +413,30 @@ function showExerciseDetail(exId) {
       scales: {
         x: { ticks: { color: '#8892a4' }, grid: { display: false } },
         y: { min: 0, max: 20, ticks: { color: '#8892a4' }, grid: { color: 'rgba(45,50,68,.5)' } }
+      }
+    }
+  });
+
+  // Volume trend chart
+  if (volumeChart) volumeChart.destroy();
+  const volumeData = h.map(e => e.volume || 0);
+  volumeChart = new Chart(document.getElementById('volume-chart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Volumen (kg)', data: volumeData,
+        borderColor: '#00b894', backgroundColor: 'rgba(0,184,148,.1)',
+        fill: true, tension: 0.3, pointRadius: 5,
+        pointBackgroundColor: '#00b894', pointBorderColor: '#fff', pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8892a4' }, grid: { color: 'rgba(45,50,68,.5)' } },
+        y: { ticks: { color: '#8892a4' }, grid: { color: 'rgba(45,50,68,.5)' } }
       }
     }
   });
@@ -584,6 +625,10 @@ function renderWorkoutState() {
 
   // Weight stepper always visible (user can adjust weight for mini-sets too)
   document.getElementById('wo-weight-section').style.display = '';
+
+  // Undo button: show if any set has been done
+  const hasAnySets = activeWorkout.startSetDone || activeWorkout.currentMiniSets.length > 0;
+  document.getElementById('wo-undo-btn').style.display = hasAnySets && !done ? '' : 'none';
 
   // Buttons
   document.getElementById('wo-save-btn').style.display = done ? 'none' : '';
@@ -882,6 +927,7 @@ function exportData() {
   const data = {
     history,
     meta,
+    exercises: EXERCISES,
     exportDate: new Date().toISOString(),
     version: 'fittrack_v3'
   };
@@ -910,6 +956,7 @@ function importData(event) {
           () => {
             history = data.history;
             if (data.meta) { meta = data.meta; saveMeta(); }
+            if (data.exercises) { EXERCISES = data.exercises; saveExercises(); }
             saveHistory();
             renderDashboard();
             showToast('Daten importiert ✓');
@@ -934,11 +981,232 @@ function confirmResetData() {
     () => {
       localStorage.removeItem('fittrack_v2');
       localStorage.removeItem('fittrack_v2_meta');
+      localStorage.removeItem('fittrack_exercises');
       history = {};
       meta = { nextWorkout: 'A', lastWorkoutDate: null };
+      EXERCISES = JSON.parse(JSON.stringify(DEFAULT_EXERCISES));
       renderDashboard();
       showPage('page-dashboard');
       showToast('Daten gelöscht');
+    }
+  );
+}
+
+// ========== HEATMAP ==========
+function renderHeatmap() {
+  const container = document.getElementById('heatmap-container');
+  const allDates = {};
+  Object.values(history).flat().forEach(e => {
+    allDates[e.date] = (allDates[e.date] || 0) + 1;
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const weeks = 16;
+  const totalDays = weeks * 7;
+
+  // Find the start: go back to the Monday of (weeks) ago
+  const endDay = new Date(today);
+  const startDay = new Date(today);
+  startDay.setDate(startDay.getDate() - totalDays + 1);
+  // Align to Monday
+  const dayOfWeek = startDay.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  startDay.setDate(startDay.getDate() + mondayOffset);
+
+  // Build day cells
+  const days = [];
+  const d = new Date(startDay);
+  while (d <= endDay) {
+    const dateStr = d.toISOString().split('T')[0];
+    const count = allDates[dateStr] || 0;
+    const isToday = d.getTime() === today.getTime();
+    let level = 0;
+    if (count >= 5) level = 3;
+    else if (count >= 3) level = 2;
+    else if (count >= 1) level = 1;
+    days.push({ dateStr, level, isToday, date: new Date(d) });
+    d.setDate(d.getDate() + 1);
+  }
+
+  // Month labels
+  const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+  let monthLabelsHtml = '<div class="heatmap-month-labels"><span></span>'; // offset for day labels
+  let lastMonth = -1;
+  for (let i = 0; i < days.length; i += 7) {
+    const m = days[i].date.getMonth();
+    if (m !== lastMonth) {
+      monthLabelsHtml += `<span style="min-width:${21}px">${monthNames[m]}</span>`;
+      lastMonth = m;
+    } else {
+      monthLabelsHtml += `<span style="min-width:21px"></span>`;
+    }
+  }
+  monthLabelsHtml += '</div>';
+
+  // Day labels
+  const dayLabels = ['Mo', '', 'Mi', '', 'Fr', '', 'So'];
+  const dayLabelsHtml = `<div class="heatmap-day-labels">${dayLabels.map(l => `<span>${l}</span>`).join('')}</div>`;
+
+  // Grid
+  const gridHtml = days.map(day => {
+    const cls = `heatmap-day level-${day.level}${day.isToday ? ' today' : ''}`;
+    const title = `${new Date(day.dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}`;
+    return `<div class="${cls}" title="${title}"></div>`;
+  }).join('');
+
+  container.innerHTML = `
+    ${monthLabelsHtml}
+    <div style="display:flex">
+      ${dayLabelsHtml}
+      <div class="heatmap-wrapper"><div class="heatmap">${gridHtml}</div></div>
+    </div>
+    <div class="heatmap-legend">
+      <span>Weniger</span>
+      <div class="swatch heatmap-day"></div>
+      <div class="swatch heatmap-day level-1"></div>
+      <div class="swatch heatmap-day level-2"></div>
+      <div class="swatch heatmap-day level-3"></div>
+      <span>Mehr</span>
+    </div>`;
+}
+
+// ========== UNDO LAST SET ==========
+function undoLastSet() {
+  if (!activeWorkout) return;
+
+  if (activeWorkout.currentMiniSets.length > 0) {
+    // Undo last mini-set
+    const last = activeWorkout.currentMiniSets.pop();
+    const reps = typeof last === 'object' ? last.reps : last;
+    const weight = typeof last === 'object' ? last.weight : woCurrentWeight;
+    activeWorkout.miniSetTotal -= reps;
+    woCurrentReps = reps;
+    woCurrentWeight = weight;
+    showToast(`Mini-Set rückgängig: ${reps} Reps`);
+    renderWorkoutState();
+  } else if (activeWorkout.startSetDone) {
+    // Undo start set
+    woCurrentReps = activeWorkout.startSetReps;
+    woCurrentWeight = activeWorkout.startSetWeight;
+    activeWorkout.startSetReps = 0;
+    activeWorkout.startSetDone = false;
+    activeWorkout.startSetWeight = 0;
+    document.getElementById('wo-start-set-info').style.display = 'none';
+    document.getElementById('wo-start-set-info').classList.remove('visible');
+    showToast('Start Set rückgängig');
+    renderWorkoutState();
+  }
+}
+
+// ========== EXERCISE MANAGEMENT ==========
+let editingExerciseId = null;
+
+function renderExerciseManageList() {
+  const container = document.getElementById('exercise-manage-list');
+  const sorted = Object.entries(EXERCISES).sort((a, b) => {
+    if (a[1].workout !== b[1].workout) return a[1].workout.localeCompare(b[1].workout);
+    return a[1].order - b[1].order;
+  });
+
+  container.innerHTML = sorted.map(([id, ex]) => {
+    const badgeClass = ex.workout === 'A' ? 'workout-badge-a' : 'workout-badge-b';
+    return `<div class="exercise-manage-item">
+      <div class="exercise-manage-info">
+        <div class="exercise-manage-name">
+          <span class="workout-badge ${badgeClass}">${ex.workout}</span>
+          ${ex.icon} ${ex.name}
+        </div>
+        <div class="exercise-manage-meta">
+          ${ex.ss}kg → ${ex.current}kg${ex.invertProgress ? ' (Unterstützung)' : ''}
+        </div>
+      </div>
+      <div class="exercise-manage-actions">
+        <button class="icon-btn edit" onclick="openEditExercise('${id}')" title="Bearbeiten" aria-label="${ex.name} bearbeiten">✏️</button>
+        <button class="icon-btn delete" onclick="deleteExercise('${id}')" title="Löschen" aria-label="${ex.name} löschen">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddExercise() {
+  editingExerciseId = null;
+  document.getElementById('exercise-modal-title').textContent = 'Übung hinzufügen';
+  document.getElementById('ex-name').value = '';
+  document.getElementById('ex-workout').value = 'A';
+  document.getElementById('ex-icon').value = '🏋️';
+  document.getElementById('ex-start-weight').value = '10';
+  document.getElementById('ex-current-weight').value = '10';
+  document.getElementById('ex-invert').checked = false;
+  document.getElementById('exercise-modal').classList.add('active');
+}
+
+function openEditExercise(id) {
+  editingExerciseId = id;
+  const ex = EXERCISES[id];
+  document.getElementById('exercise-modal-title').textContent = 'Übung bearbeiten';
+  document.getElementById('ex-name').value = ex.name;
+  document.getElementById('ex-workout').value = ex.workout;
+  document.getElementById('ex-icon').value = ex.icon;
+  document.getElementById('ex-start-weight').value = ex.ss;
+  document.getElementById('ex-current-weight').value = ex.current;
+  document.getElementById('ex-invert').checked = ex.invertProgress;
+  document.getElementById('exercise-modal').classList.add('active');
+}
+
+function closeExerciseModal() {
+  document.getElementById('exercise-modal').classList.remove('active');
+  editingExerciseId = null;
+}
+
+function saveExercise() {
+  const name = document.getElementById('ex-name').value.trim();
+  const workout = document.getElementById('ex-workout').value;
+  const icon = document.getElementById('ex-icon').value;
+  const ss = parseFloat(document.getElementById('ex-start-weight').value);
+  const current = parseFloat(document.getElementById('ex-current-weight').value);
+  const invertProgress = document.getElementById('ex-invert').checked;
+
+  if (!name) { showToast('Bitte Name eingeben!'); return; }
+  if (isNaN(ss) || isNaN(current)) { showToast('Bitte gültige Gewichte eingeben!'); return; }
+
+  // Calculate order: append at end of workout group
+  const sameWorkout = Object.values(EXERCISES).filter(e => e.workout === workout);
+  const maxOrder = sameWorkout.length > 0 ? Math.max(...sameWorkout.map(e => e.order)) : 0;
+
+  if (editingExerciseId) {
+    // Edit existing
+    const ex = EXERCISES[editingExerciseId];
+    ex.name = name;
+    ex.workout = workout;
+    ex.icon = icon;
+    ex.ss = ss;
+    ex.current = current;
+    ex.invertProgress = invertProgress;
+  } else {
+    // Create new — generate ID from name
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '');
+    const uniqueId = EXERCISES[id] ? id + '_' + Date.now() : id;
+    EXERCISES[uniqueId] = { name, workout, order: maxOrder + 1, ss, current, icon, invertProgress };
+  }
+
+  saveExercises();
+  closeExerciseModal();
+  renderExerciseManageList();
+  showToast(editingExerciseId ? 'Übung aktualisiert ✓' : 'Übung hinzugefügt ✓');
+}
+
+function deleteExercise(id) {
+  const ex = EXERCISES[id];
+  showModal(
+    'Übung löschen?',
+    `"${ex.name}" wirklich löschen? Die Trainingshistorie bleibt erhalten.`,
+    'Löschen',
+    () => {
+      delete EXERCISES[id];
+      saveExercises();
+      renderExerciseManageList();
+      showToast('Übung gelöscht');
     }
   );
 }

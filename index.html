@@ -62,7 +62,7 @@
       <div class="subtitle" id="current-date"></div>
     </div>
     <div class="header-actions">
-      <button class="header-icon-btn" onclick="showPage('page-settings')" aria-label="Einstellungen & Daten">⚙️</button>
+      <button class="header-icon-btn" onclick="showPage('page-settings'); renderExerciseManageList()" aria-label="Einstellungen & Daten">⚙️</button>
     </div>
   </div>
   <div class="container">
@@ -79,6 +79,12 @@
         <div class="stat-value" id="stat-prs">0</div>
         <div class="stat-label">Gewicht-<br>steigerungen</div>
       </div>
+    </div>
+
+    <!-- CALENDAR HEATMAP -->
+    <div class="card">
+      <div class="card-title">Trainings-Kalender</div>
+      <div id="heatmap-container"></div>
     </div>
 
     <div class="card">
@@ -116,6 +122,10 @@
     <div class="card">
       <div class="card-title">Start-Set Reps</div>
       <div class="chart-container"><canvas id="reps-chart" aria-label="Start-Set Reps Diagramm"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Volumen-Trend (kg)</div>
+      <div class="chart-container"><canvas id="volume-chart" aria-label="Volumen-Trend Diagramm"></canvas></div>
     </div>
     <div class="card">
       <div class="suggestion" id="detail-suggestion"></div>
@@ -162,6 +172,11 @@
 
       <!-- Logged Mini-Sets -->
       <div id="wo-sets-log"></div>
+
+      <!-- UNDO BUTTON -->
+      <button class="btn-undo" id="wo-undo-btn" onclick="undoLastSet()" style="display:none" aria-label="Letzten Set rückgängig machen">
+        ↩ Letzten Set rückgängig
+      </button>
 
       <!-- WEIGHT STEPPER -->
       <div class="stepper-section" id="wo-weight-section">
@@ -260,7 +275,15 @@
 <div class="page" id="page-settings">
   <div class="header"><h1>Einstellungen & Daten</h1></div>
   <div class="container">
-    <button class="back-btn" onclick="showPage('page-dashboard')" aria-label="Zurück zum Dashboard">← Zurück</button>
+    <button class="back-btn" onclick="showPage('page-dashboard'); renderDashboard()" aria-label="Zurück zum Dashboard">← Zurück</button>
+
+    <!-- EXERCISE MANAGEMENT -->
+    <div class="card">
+      <div class="card-title">Übungen verwalten</div>
+      <div id="exercise-manage-list"></div>
+      <button class="btn btn-primary" onclick="openAddExercise()" style="margin-top:12px">+ Übung hinzufügen</button>
+    </div>
+
     <div class="card">
       <div class="card-title">Daten exportieren / importieren</div>
       <p class="data-description">
@@ -275,6 +298,57 @@
     <div class="card">
       <div class="card-title">Daten zurücksetzen</div>
       <button class="btn btn-danger" onclick="confirmResetData()">Alle Daten löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ADD/EDIT EXERCISE MODAL ========== -->
+<div class="modal-overlay" id="exercise-modal" role="dialog" aria-modal="true" aria-label="Übung bearbeiten">
+  <div class="modal modal-wide">
+    <h2 id="exercise-modal-title">Übung hinzufügen</h2>
+    <div style="text-align:left; margin:16px 0">
+      <div class="form-group">
+        <label for="ex-name">Name</label>
+        <input type="text" id="ex-name" style="text-align:left" placeholder="z.B. Bench Press">
+      </div>
+      <div class="form-grid form-grid-2">
+        <div class="form-group">
+          <label for="ex-workout">Workout</label>
+          <select id="ex-workout">
+            <option value="A">Workout A</option>
+            <option value="B">Workout B</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="ex-icon">Icon</label>
+          <select id="ex-icon">
+            <option value="🏋️">🏋️ Gewicht</option>
+            <option value="💪">💪 Arm</option>
+            <option value="🦵">🦵 Bein</option>
+            <option value="🔄">🔄 Rotation</option>
+            <option value="⬆️">⬆️ Push</option>
+            <option value="⬇️">⬇️ Pull</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid form-grid-2">
+        <div class="form-group">
+          <label for="ex-start-weight">Startgewicht (kg)</label>
+          <input type="number" id="ex-start-weight" step="0.5" value="10">
+        </div>
+        <div class="form-group">
+          <label for="ex-current-weight">Aktuelles Gewicht (kg)</label>
+          <input type="number" id="ex-current-weight" step="0.5" value="10">
+        </div>
+      </div>
+      <label class="checkbox-group">
+        <input type="checkbox" id="ex-invert">
+        Unterstützungsgewicht (z.B. Assisted Dips)
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeExerciseModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveExercise()">Speichern</button>
     </div>
   </div>
 </div>
