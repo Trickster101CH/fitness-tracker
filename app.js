@@ -61,7 +61,7 @@ function loadHistory() {
     const saved = localStorage.getItem('fittrack_v2');
     if (saved) return JSON.parse(saved);
   } catch (e) { /* ignore */ }
-  return generateMockHistory();
+  return {};
 }
 
 function saveHistory() {
@@ -73,47 +73,11 @@ function loadMeta() {
     const saved = localStorage.getItem('fittrack_v2_meta');
     if (saved) return JSON.parse(saved);
   } catch (e) { /* ignore */ }
-  return { nextWorkout: 'A', lastWorkoutDate: null };
+  return { nextWorkout: 'B', lastWorkoutDate: null };
 }
 
 function saveMeta() {
   try { localStorage.setItem('fittrack_v2_meta', JSON.stringify(meta)); } catch (e) { /* ignore */ }
-}
-
-function generateMockHistory() {
-  const data = {};
-  const now = new Date();
-  Object.keys(EXERCISES).forEach(exId => {
-    const ex = EXERCISES[exId];
-    data[exId] = [];
-    const startW = ex.ss;
-    const endW = ex.current;
-    const steps = 5;
-    for (let i = 0; i <= steps; i++) {
-      const dayOffset = (steps - i) * 7 + (ex.workout === 'B' ? 2 : 0);
-      const date = new Date(now);
-      date.setDate(date.getDate() - dayOffset);
-      const weight = +(startW + (endW - startW) * (i / steps)).toFixed(1);
-      const ssReps = 10 + Math.floor(Math.random() * 4);
-      // Mini-sets: 20 reps total (independent of start set)
-      const miniSets = [];
-      let left = 20;
-      while (left > 0) {
-        const r = Math.min(left, 3 + Math.floor(Math.random() * 3));
-        miniSets.push(r);
-        left -= r;
-      }
-      data[exId].push({
-        date: date.toISOString().split('T')[0],
-        weight,
-        startSetReps: ssReps,
-        miniSetTotal: 20,
-        sets: miniSets,
-        volume: (20 + ssReps) * weight
-      });
-    }
-  });
-  return data;
 }
 
 let history = loadHistory();
