@@ -511,6 +511,7 @@ function loadExerciseIntoWorkout() {
 
   activeWorkout.startSetReps = 0;
   activeWorkout.startSetDone = false;
+  activeWorkout.startSetWeight = 0;
   activeWorkout.currentMiniSets = [];
   activeWorkout.miniSetTotal = 0;
 
@@ -542,7 +543,7 @@ function renderWorkoutState() {
     banner.style.display = '';
     banner.classList.add('visible');
     document.getElementById('wo-start-set-text').textContent =
-      `Start Set: ${activeWorkout.startSetReps} Reps @ ${woCurrentWeight}kg (unabhängig)`;
+      `Start Set: ${activeWorkout.startSetReps} Reps @ ${activeWorkout.startSetWeight}kg (unabhängig)`;
   }
 
   // Reps label
@@ -569,20 +570,20 @@ function renderWorkoutState() {
     setsLog.innerHTML = '';
   } else {
     let cumul = 0;
-    setsLog.innerHTML = activeWorkout.currentMiniSets.map((reps, i) => {
+    setsLog.innerHTML = activeWorkout.currentMiniSets.map((entry, i) => {
+      const reps = typeof entry === 'object' ? entry.reps : entry;
+      const w = typeof entry === 'object' ? entry.weight : woCurrentWeight;
       cumul += reps;
       return `<div class="set-entry">
         <div class="set-num">${i + 1}</div>
-        <div class="set-reps">${reps} Reps @ ${woCurrentWeight}kg</div>
+        <div class="set-reps">${reps} Reps @ ${w}kg</div>
         <div class="set-cumulative">${cumul}/${RULES.miniSetRepsTarget}</div>
       </div>`;
     }).join('');
   }
 
-  // Hide weight adjustment after start set
-  if (!isStartSet) {
-    document.getElementById('wo-weight-section').style.display = 'none';
-  }
+  // Weight stepper always visible (user can adjust weight for mini-sets too)
+  document.getElementById('wo-weight-section').style.display = '';
 
   // Buttons
   document.getElementById('wo-save-btn').style.display = done ? 'none' : '';
@@ -623,20 +624,29 @@ function logSet() {
   if (!activeWorkout.startSetDone) {
     // Start set — recorded separately, does NOT count toward 20 mini-set reps
     activeWorkout.startSetReps = woCurrentReps;
+    activeWorkout.startSetWeight = woCurrentWeight;
     activeWorkout.startSetDone = true;
-    showToast(`Start Set: ${woCurrentReps} Reps ✓`);
+    showToast(`Start Set: ${woCurrentReps} Reps @ ${woCurrentWeight}kg ✓`);
     woCurrentReps = Math.min(5, RULES.miniSetRepsTarget);
     renderWorkoutState();
     startTimer();
   } else {
-    // Mini-set
-    activeWorkout.currentMiniSets.push(woCurrentReps);
+    // Mini-set — store with weight
+    activeWorkout.currentMiniSets.push({ reps: woCurrentReps, weight: woCurrentWeight });
     activeWorkout.miniSetTotal += woCurrentReps;
 
     if (activeWorkout.miniSetTotal >= RULES.miniSetRepsTarget) {
       showToast('20 Mini-Set Reps erreicht! ✓');
       renderWorkoutState();
     } else {
+      // If ≥8 reps in this mini-set → suggest +2.5kg for next mini-set
+      if (woCurrentReps >= RULES.weightUpThreshold) {
+        const exId = activeWorkout.exercises[activeWorkout.exerciseIndex];
+        const ex = EXERCISES[exId];
+        const delta = ex.invertProgress ? -2.5 : 2.5;
+        woCurrentWeight = Math.max(0, +(woCurrentWeight + delta).toFixed(1));
+        showToast(`${woCurrentReps} Reps → Gewicht auf ${woCurrentWeight}kg erhöht!`);
+      }
       const remaining = RULES.miniSetRepsTarget - activeWorkout.miniSetTotal;
       woCurrentReps = Math.min(4, remaining);
       renderWorkoutState();
@@ -648,13 +658,26 @@ function logSet() {
 function nextExercise() {
   const exId = activeWorkout.exercises[activeWorkout.exerciseIndex];
   if (!history[exId]) history[exId] = [];
+  // Calculate volume: start set uses its own weight, mini-sets may have different weights
+  const startSetWeight = activeWorkout.startSetWeight || woCurrentWeight;
+  let miniSetVolume = 0;
+  activeWorkout.currentMiniSets.forEach(entry => {
+    if (typeof entry === 'object') {
+      miniSetVolume += entry.reps * entry.weight;
+    } else {
+      miniSetVolume += entry * woCurrentWeight;
+    }
+  });
+  const totalVolume = (activeWorkout.startSetReps * startSetWeight) + miniSetVolume;
+  // Flatten sets for history storage
+  const flatSets = activeWorkout.currentMiniSets.map(e => typeof e === 'object' ? e.reps : e);
   const entry = {
     date: new Date().toISOString().split('T')[0],
-    weight: woCurrentWeight,
+    weight: startSetWeight,
     startSetReps: activeWorkout.startSetReps,
     miniSetTotal: activeWorkout.miniSetTotal,
-    sets: [...activeWorkout.currentMiniSets],
-    volume: (activeWorkout.miniSetTotal + activeWorkout.startSetReps) * woCurrentWeight
+    sets: flatSets,
+    volume: totalVolume
   };
   history[exId].push(entry);
   saveHistory();
