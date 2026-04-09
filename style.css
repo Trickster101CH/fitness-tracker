@@ -29,7 +29,7 @@ body {
   background: var(--surface);
   border-top: 1px solid var(--border);
   display: flex; justify-content: space-around;
-  padding: 10px 0 calc(env(safe-area-inset-bottom, 0px) + 24px);
+  padding: 8px 0 env(safe-area-inset-bottom, 8px);
   z-index: 100;
 }
 .nav button {
@@ -57,7 +57,7 @@ body {
 .header-icon-btn:hover { background: var(--surface2); }
 .header-icon-btn:focus-visible { outline: 2px solid var(--accent-light); }
 
-.container { padding: 0 16px 130px; max-width: 600px; margin: 0 auto; }
+.container { padding: 0 16px 100px; max-width: 600px; margin: 0 auto; }
 
 /* ========== CARDS ========== */
 .card {
@@ -430,7 +430,7 @@ body {
 /* ========== FAB ========== */
 .fab {
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 110px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 90px);
   right: 20px;
   width: 56px; height: 56px; border-radius: 28px;
   background: var(--accent); color: white; border: none;
