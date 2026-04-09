@@ -26,11 +26,13 @@ const DEFAULT_EXERCISES = {
   pjr_pullover:    { name: 'PJR Pull Overs',         workout: 'A', order: 4, ss: 18, current: 24, icon: '🏋️', invertProgress: false, muscles: 'Lat, langer Trizeps, untere Brust' },
   goblet_squat:    { name: 'Goblet Squats',          workout: 'A', order: 5, ss: 12, current: 12, icon: '🦵', invertProgress: false, muscles: 'Quadrizeps, Gluteus, Adduktoren, Core' },
   barbell_rdl:     { name: 'Barbell RDL',            workout: 'A', order: 6, ss: 10, current: 15, icon: '🦵', invertProgress: false, muscles: 'Hamstrings, Gluteus, unterer Rücken' },
+  reverse_curl:    { name: 'Reverse Barbell Curls',  workout: 'A', order: 7, ss: 10, current: 10, icon: '💪', invertProgress: false, muscles: 'Brachioradialis, Unterarme, Griffkraft, Bizeps' },
   dips:            { name: 'Dips (Assisted)',        workout: 'B', order: 1, ss: 75, current: 54, icon: '💪', invertProgress: true,  muscles: 'Untere Brust, Trizeps, vorderer Delta' },
   cable_row_1arm:  { name: 'One Arm High Cable Row', workout: 'B', order: 2, ss: 30, current: 45, icon: '🏋️', invertProgress: false, muscles: 'Lat, Rhomboiden, hinterer Delta, Bizeps' },
   cable_lateral:   { name: 'Cable Lateral Raise',    workout: 'B', order: 3, ss: 7,  current: 16, icon: '🔄', invertProgress: false, muscles: 'Mittlerer Delta' },
   barbell_curl:    { name: 'Barbell Curls',          workout: 'B', order: 4, ss: 7.5, current: 10, icon: '💪', invertProgress: false, muscles: 'Bizeps, Brachialis, Unterarme' },
   tricep_pushdown: { name: 'Tricep Cable Push Down', workout: 'B', order: 5, ss: 40, current: 60, icon: '💪', invertProgress: false, muscles: 'Trizeps (alle Köpfe)' },
+  bulgarian_split: { name: 'Bulgarian Split Squats', workout: 'B', order: 6, ss: 10, current: 10, icon: '🦵', invertProgress: false, muscles: 'Quadrizeps, Gluteus, Adduktoren, Stabilisatoren' },
 };
 
 // Dynamic exercises — loaded from localStorage, falls back to defaults
@@ -47,6 +49,17 @@ function loadExercises() {
           parsed[id].muscles = DEFAULT_EXERCISES[id].muscles;
         }
       });
+      // Migrate: add any new default exercises that don't exist yet
+      let added = false;
+      Object.keys(DEFAULT_EXERCISES).forEach(id => {
+        if (!parsed[id]) {
+          parsed[id] = JSON.parse(JSON.stringify(DEFAULT_EXERCISES[id]));
+          added = true;
+        }
+      });
+      if (added) {
+        try { localStorage.setItem('fittrack_exercises', JSON.stringify(parsed)); } catch (e) { /* ignore */ }
+      }
       return parsed;
     }
   } catch (e) { /* ignore */ }
