@@ -236,6 +236,20 @@ function renderDashboard() {
   renderExerciseList('A', 'exercises-a');
   renderExerciseList('B', 'exercises-b');
 
+  // Update FAB to show "Resume" if a workout is running
+  const fab = document.querySelector('.fab');
+  if (fab) {
+    if (activeWorkout) {
+      fab.textContent = '⏵';
+      fab.setAttribute('aria-label', 'Workout fortsetzen');
+      fab.classList.add('resume');
+    } else {
+      fab.textContent = '▶';
+      fab.setAttribute('aria-label', 'Workout starten');
+      fab.classList.remove('resume');
+    }
+  }
+
   // Stats
   const allEntries = Object.values(history).flat();
   const thisMonth = allEntries.filter(e => {
@@ -359,24 +373,77 @@ function showExerciseDetail(exId) {
   });
 
   if (repsChart) repsChart.destroy();
+  // Build stacked bar: Start Set + each Mini-Set as separate dataset
+  // Find max number of mini-sets across all sessions
+  const maxMiniSets = h.reduce((max, e) => Math.max(max, (e.sets || []).length), 0);
+  const miniSetColors = [
+    'rgba(108,92,231,.75)',  // accent purple
+    'rgba(0,184,148,.75)',    // green
+    'rgba(253,203,110,.75)', // orange
+    'rgba(162,155,254,.75)', // light purple
+    'rgba(0,206,201,.75)',   // teal
+    'rgba(255,159,67,.75)',  // amber
+    'rgba(255,107,129,.75)', // pink
+    'rgba(72,219,251,.75)',  // sky
+  ];
+  const ssDataset = {
+    label: 'Start Set',
+    data: h.map(e => e.startSetReps),
+    backgroundColor: 'rgba(225,112,85,.85)', // orange/red for SS
+    borderRadius: 4,
+    stack: 'reps',
+    // Store weights for tooltips
+    weights: h.map(e => e.weight)
+  };
+  const miniSetDatasets = [];
+  for (let i = 0; i < maxMiniSets; i++) {
+    miniSetDatasets.push({
+      label: `Mini-Set ${i + 1}`,
+      data: h.map(e => {
+        const s = (e.sets || [])[i];
+        if (!s) return 0;
+        return typeof s === 'object' ? s.reps : s;
+      }),
+      backgroundColor: miniSetColors[i % miniSetColors.length],
+      borderRadius: 4,
+      stack: 'reps',
+      weights: h.map(e => {
+        const s = (e.sets || [])[i];
+        if (!s) return null;
+        return typeof s === 'object' ? s.weight : e.weight;
+      })
+    });
+  }
   repsChart = new Chart(document.getElementById('reps-chart').getContext('2d'), {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        label: 'Start-Set Reps', data: h.map(e => e.startSetReps),
-        backgroundColor: h.map(e =>
-          e.startSetReps >= RULES.startSetTarget ? 'rgba(0,184,148,.7)' :
-            e.startSetReps >= RULES.weightUpThreshold ? 'rgba(253,203,110,.7)' : 'rgba(225,112,85,.7)'
-        ), borderRadius: 6
-      }]
+      datasets: [ssDataset, ...miniSetDatasets]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { color: '#8892a4', font: { size: 10 }, boxWidth: 12, padding: 8 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const ds = ctx.dataset;
+              const reps = ctx.parsed.y;
+              if (reps === 0) return null;
+              const weight = ds.weights ? ds.weights[ctx.dataIndex] : null;
+              const w = weight != null ? ` @ ${weight}kg` : '';
+              return `${ds.label}: ${reps} Reps${w}`;
+            }
+          }
+        }
+      },
       scales: {
-        x: { ticks: { color: '#8892a4' }, grid: { display: false } },
-        y: { min: 0, max: 20, ticks: { color: '#8892a4' }, grid: { color: 'rgba(45,50,68,.5)' } }
+        x: { stacked: true, ticks: { color: '#8892a4' }, grid: { display: false } },
+        y: { stacked: true, min: 0, ticks: { color: '#8892a4' }, grid: { color: 'rgba(45,50,68,.5)' } }
       }
     }
   });
@@ -487,6 +554,15 @@ let woCurrentReps = 12;
 let workoutLog = [];
 
 function startWorkout() {
+  // If a workout is already active, resume it instead of restarting
+  if (activeWorkout) {
+    showPage('page-workout');
+    document.getElementById('workout-header').textContent = `Workout ${activeWorkout.type}`;
+    renderExerciseNav();
+    renderLastSessionInfo(activeWorkout.exercises[activeWorkout.exerciseIndex]);
+    renderWorkoutState();
+    return;
+  }
   const type = meta.nextWorkout;
   const exs = Object.entries(EXERCISES)
     .filter(([, e]) => e.workout === type)
@@ -530,7 +606,85 @@ function loadExerciseIntoWorkout() {
   document.getElementById('wo-start-set-info').style.display = 'none';
   document.getElementById('wo-start-set-info').classList.remove('visible');
 
+  renderExerciseNav();
+  renderLastSessionInfo(exId);
   renderWorkoutState();
+}
+
+function renderExerciseNav() {
+  if (!activeWorkout) return;
+  const nav = document.getElementById('exercise-nav');
+  const doneIds = new Set(workoutLog.map(l => l.exId));
+  nav.innerHTML = activeWorkout.exercises.map((id, i) => {
+    const ex = EXERCISES[id];
+    const isActive = i === activeWorkout.exerciseIndex;
+    const isDone = doneIds.has(id);
+    const shortName = ex.name.split(' ').slice(0, 2).join(' ');
+    let cls = 'exercise-nav-pill';
+    if (isActive) cls += ' active';
+    else if (isDone) cls += ' done';
+    return `<button class="${cls}" onclick="jumpToExercise(${i})">${shortName}</button>`;
+  }).join('');
+  // Scroll active pill into view
+  const activePill = nav.querySelector('.active');
+  if (activePill) activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
+
+function jumpToExercise(index) {
+  if (!activeWorkout || index === activeWorkout.exerciseIndex) return;
+  // If current exercise has a completed start set but mini-sets aren't done, confirm
+  if (activeWorkout.startSetDone && activeWorkout.miniSetTotal < RULES.miniSetRepsTarget) {
+    showModal(
+      'Übung wechseln?',
+      'Die aktuelle Übung ist noch nicht abgeschlossen. Fortschritt geht verloren.',
+      'Wechseln',
+      () => { doJumpToExercise(index); }
+    );
+  } else {
+    doJumpToExercise(index);
+  }
+}
+
+function doJumpToExercise(index) {
+  // Don't save incomplete exercise
+  activeWorkout.exerciseIndex = index;
+  loadExerciseIntoWorkout();
+}
+
+function renderLastSessionInfo(exId) {
+  const box = document.getElementById('wo-last-info');
+  const h = history[exId] || [];
+  if (h.length === 0) {
+    box.style.display = 'none';
+    return;
+  }
+  const last = h[h.length - 1];
+  const sug = getSuggestion(exId);
+  let html = `<div class="last-info-title">Letztes Workout</div>`;
+  // Start set row with last weight vs suggested
+  html += `<div class="last-info-row">
+    <span class="last-info-label">Start Set</span>
+    <span class="last-info-value">${last.startSetReps} Reps @ ${last.weight}kg</span>
+  </div>`;
+  if (sug.weight !== last.weight) {
+    html += `<div class="last-info-row">
+      <span class="last-info-label">Vorschlag heute</span>
+      <span class="last-info-value" style="color:var(--accent-light)">${sug.weight}kg</span>
+    </div>`;
+  }
+  // Mini-sets from last session
+  if (last.sets && last.sets.length > 0) {
+    const miniSetDetails = last.sets.map((s, i) => {
+      if (typeof s === 'object') return `${s.reps}×${s.weight}kg`;
+      return `${s} Reps`;
+    }).join(' · ');
+    html += `<div class="last-info-row" style="margin-top:4px">
+      <span class="last-info-label">Mini-Sets</span>
+      <span class="last-info-value">${miniSetDetails}</span>
+    </div>`;
+  }
+  box.innerHTML = html;
+  box.style.display = '';
 }
 
 function renderWorkoutState() {
@@ -587,6 +741,25 @@ function renderWorkoutState() {
     }).join('');
   }
 
+  // Show last weight hint in stepper
+  const exId = activeWorkout.exercises[activeWorkout.exerciseIndex];
+  const lastH = (history[exId] || []);
+  const lastEntry = lastH.length > 0 ? lastH[lastH.length - 1] : null;
+  const weightHint = document.querySelector('#wo-weight-section .stepper-unit');
+  if (lastEntry && !isStartSet) {
+    const miniSetIdx = activeWorkout.currentMiniSets.length;
+    const lastSets = lastEntry.sets || [];
+    if (miniSetIdx < lastSets.length && typeof lastSets[miniSetIdx] === 'object') {
+      weightHint.textContent = `kg (±2.5) · Letztes Mal Mini-Set ${miniSetIdx + 1}: ${lastSets[miniSetIdx].weight}kg`;
+    } else {
+      weightHint.textContent = `kg (±2.5) · Letztes Mal SS: ${lastEntry.weight}kg`;
+    }
+  } else if (lastEntry) {
+    weightHint.textContent = `kg (±2.5) · Letztes Mal: ${lastEntry.weight}kg`;
+  } else {
+    weightHint.textContent = 'kg (±2.5) · Tippe auf Zahl zum Eintippen';
+  }
+
   // Weight stepper always visible (user can adjust weight for mini-sets too)
   document.getElementById('wo-weight-section').style.display = '';
 
@@ -607,7 +780,12 @@ function renderWorkoutState() {
   }
 
   if (done) {
-    const isLast = activeWorkout.exerciseIndex >= activeWorkout.exercises.length - 1;
+    const doneIds = new Set(workoutLog.map(l => l.exId));
+    // Check if this is the last undone exercise
+    const remainingUndone = activeWorkout.exercises.filter((id, i) =>
+      i !== activeWorkout.exerciseIndex && !doneIds.has(id)
+    );
+    const isLast = remainingUndone.length === 0;
     document.getElementById('wo-next-btn').textContent = isLast ? '🏁 WORKOUT BEENDEN' : 'NÄCHSTE ÜBUNG →';
   }
 }
@@ -682,14 +860,16 @@ function nextExercise() {
     }
   });
   const totalVolume = (activeWorkout.startSetReps * startSetWeight) + miniSetVolume;
-  // Flatten sets for history storage
-  const flatSets = activeWorkout.currentMiniSets.map(e => typeof e === 'object' ? e.reps : e);
+  // Store mini-sets with weights
+  const miniSetsWithWeights = activeWorkout.currentMiniSets.map(e =>
+    typeof e === 'object' ? { reps: e.reps, weight: e.weight } : { reps: e, weight: woCurrentWeight }
+  );
   const entry = {
     date: new Date().toISOString().split('T')[0],
     weight: startSetWeight,
     startSetReps: activeWorkout.startSetReps,
     miniSetTotal: activeWorkout.miniSetTotal,
-    sets: flatSets,
+    sets: miniSetsWithWeights,
     volume: totalVolume
   };
   history[exId].push(entry);
@@ -701,7 +881,18 @@ function nextExercise() {
     showWorkoutSummary();
     return;
   }
-  activeWorkout.exerciseIndex++;
+  // Find next exercise that hasn't been done yet, or just go to next
+  const doneIds = new Set(workoutLog.map(l => l.exId));
+  let nextIdx = activeWorkout.exerciseIndex + 1;
+  // Skip already completed exercises
+  while (nextIdx < activeWorkout.exercises.length && doneIds.has(activeWorkout.exercises[nextIdx])) {
+    nextIdx++;
+  }
+  if (nextIdx >= activeWorkout.exercises.length) {
+    showWorkoutSummary();
+    return;
+  }
+  activeWorkout.exerciseIndex = nextIdx;
   loadExerciseIntoWorkout();
 }
 
@@ -899,7 +1090,7 @@ function exportData() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `fittrack-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `fittrack-${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('Daten exportiert ✓');

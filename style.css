@@ -29,7 +29,7 @@ body {
   background: var(--surface);
   border-top: 1px solid var(--border);
   display: flex; justify-content: space-around;
-  padding: 8px 0 env(safe-area-inset-bottom, 8px);
+  padding: 10px 0 calc(env(safe-area-inset-bottom, 0px) + 24px);
   z-index: 100;
 }
 .nav button {
@@ -57,7 +57,7 @@ body {
 .header-icon-btn:hover { background: var(--surface2); }
 .header-icon-btn:focus-visible { outline: 2px solid var(--accent-light); }
 
-.container { padding: 0 16px 100px; max-width: 600px; margin: 0 auto; }
+.container { padding: 0 16px 130px; max-width: 600px; margin: 0 auto; }
 
 /* ========== CARDS ========== */
 .card {
@@ -272,6 +272,46 @@ body {
 }
 .start-set-banner.visible { display: flex; }
 
+/* ========== EXERCISE NAVIGATION ========== */
+.exercise-nav {
+  display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto;
+  padding: 2px 0; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.exercise-nav::-webkit-scrollbar { display: none; }
+.exercise-nav-pill {
+  flex-shrink: 0; padding: 8px 14px; border-radius: 20px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .2s; white-space: nowrap;
+}
+.exercise-nav-pill.active {
+  background: rgba(108,92,231,.2); border-color: var(--accent);
+  color: var(--accent-light);
+}
+.exercise-nav-pill.done {
+  background: rgba(0,184,148,.1); border-color: rgba(0,184,148,.3);
+  color: var(--green);
+}
+.exercise-nav-pill.done::before { content: '✓ '; }
+
+/* ========== LAST SESSION INFO BOX ========== */
+.last-info-box {
+  background: rgba(108,92,231,.08); border: 1px solid rgba(108,92,231,.25);
+  border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;
+  font-size: 13px; line-height: 1.6;
+}
+.last-info-title {
+  font-size: 11px; font-weight: 600; color: var(--accent-light);
+  text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;
+}
+.last-info-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 3px 0;
+}
+.last-info-label { color: var(--text-dim); }
+.last-info-value { font-weight: 600; color: var(--text); }
+
 /* ========== EXERCISE CARD HEADER ========== */
 .exercise-card-header {
   display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
@@ -343,7 +383,9 @@ body {
 
 /* ========== FAB ========== */
 .fab {
-  position: fixed; bottom: 80px; right: 20px;
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 110px);
+  right: 20px;
   width: 56px; height: 56px; border-radius: 28px;
   background: var(--accent); color: white; border: none;
   font-size: 28px; cursor: pointer; z-index: 99;
@@ -351,6 +393,15 @@ body {
   display: flex; align-items: center; justify-content: center;
 }
 .fab:focus-visible { outline: 3px solid var(--accent-light); outline-offset: 2px; }
+.fab.resume {
+  background: var(--green);
+  box-shadow: 0 4px 20px rgba(0,184,148,.5);
+  animation: fab-pulse 2s ease-in-out infinite;
+}
+@keyframes fab-pulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(0,184,148,.5); }
+  50% { box-shadow: 0 4px 28px rgba(0,184,148,.85); }
+}
 
 /* ========== TAGS ========== */
 .inline-tag {

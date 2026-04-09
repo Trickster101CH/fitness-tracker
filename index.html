@@ -120,8 +120,8 @@
       <div class="chart-container"><canvas id="weight-chart" aria-label="Gewichtsverlauf Diagramm"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">Start-Set Reps</div>
-      <div class="chart-container"><canvas id="reps-chart" aria-label="Start-Set Reps Diagramm"></canvas></div>
+      <div class="card-title">Reps pro Set (gestapelt)</div>
+      <div class="chart-container"><canvas id="reps-chart" aria-label="Reps pro Set Diagramm"></canvas></div>
     </div>
     <div class="card">
       <div class="card-title">Volumen-Trend (kg)</div>
@@ -150,11 +150,17 @@
     <button class="end-workout-btn" onclick="confirmEndWorkout()" aria-label="Workout beenden">Beenden</button>
   </div>
   <div class="container">
+    <!-- Exercise Navigation Pills -->
+    <div class="exercise-nav" id="exercise-nav"></div>
+
     <div class="card" id="current-exercise-card">
       <div class="exercise-card-header">
         <div id="wo-exercise-name" class="exercise-card-name"></div>
         <div id="wo-exercise-number" class="exercise-card-number"></div>
       </div>
+
+      <!-- Last Session Info Box -->
+      <div id="wo-last-info" class="last-info-box" style="display:none"></div>
 
       <!-- Start Set Info Banner -->
       <div id="wo-start-set-info" class="set-entry start-set-banner">
