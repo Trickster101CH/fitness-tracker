@@ -542,9 +542,12 @@ body {
   width: 12px; height: 12px; border-radius: 2px;
 }
 .heatmap-month-labels {
-  display: flex; font-size: 10px; color: var(--text-dim); margin-bottom: 4px;
+  display: flex; gap: 3px; font-size: 10px; color: var(--text-dim);
+  margin-bottom: 4px;
 }
-.heatmap-month-labels span { min-width: 21px; }
+.heatmap-month-labels .month-label {
+  width: 18px; flex-shrink: 0; overflow: visible; white-space: nowrap;
+}
 
 /* ========== EXERCISE MANAGEMENT ========== */
 .exercise-manage-item {

@@ -1409,15 +1409,15 @@ function renderHeatmap() {
 
   // Month labels
   const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
-  let monthLabelsHtml = '<div class="heatmap-month-labels"><span></span>'; // offset for day labels
+  let monthLabelsHtml = '<div class="heatmap-month-labels">';
   let lastMonth = -1;
   for (let i = 0; i < days.length; i += 7) {
     const m = days[i].date.getMonth();
     if (m !== lastMonth) {
-      monthLabelsHtml += `<span style="min-width:${21}px">${monthNames[m]}</span>`;
+      monthLabelsHtml += `<span class="month-label">${monthNames[m]}</span>`;
       lastMonth = m;
     } else {
-      monthLabelsHtml += `<span style="min-width:21px"></span>`;
+      monthLabelsHtml += `<span class="month-label"></span>`;
     }
   }
   monthLabelsHtml += '</div>';
@@ -1434,10 +1434,12 @@ function renderHeatmap() {
   }).join('');
 
   container.innerHTML = `
-    ${monthLabelsHtml}
     <div style="display:flex">
       ${dayLabelsHtml}
-      <div class="heatmap-wrapper"><div class="heatmap">${gridHtml}</div></div>
+      <div class="heatmap-wrapper">
+        ${monthLabelsHtml}
+        <div class="heatmap">${gridHtml}</div>
+      </div>
     </div>
     <div class="heatmap-legend">
       <span>Weniger</span>
@@ -1447,6 +1449,10 @@ function renderHeatmap() {
       <div class="swatch heatmap-day level-3"></div>
       <span>Mehr</span>
     </div>`;
+
+  // Auto-scroll to the right end so the most recent week (today) is visible
+  const wrapper = container.querySelector('.heatmap-wrapper');
+  if (wrapper) wrapper.scrollLeft = wrapper.scrollWidth;
 }
 
 // ========== UNDO LAST SET ==========
