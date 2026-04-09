@@ -111,6 +111,10 @@ body {
 .exercise-icon { font-size: 22px; flex-shrink: 0; }
 .exercise-info { flex: 1; margin-left: 12px; }
 .exercise-name { font-size: 15px; font-weight: 600; }
+.exercise-muscles {
+  font-size: 11px; color: var(--accent-light);
+  margin-top: 3px; font-weight: 500; line-height: 1.3;
+}
 .exercise-meta { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
 .exercise-weights { text-align: right; font-size: 12px; }
 .exercise-weights .current { font-size: 16px; font-weight: 700; color: var(--text); }
@@ -208,6 +212,42 @@ body {
 .btn-save-set.orange { background: var(--orange); color: #000; }
 .btn-save-set.accent { background: var(--accent); color: white; }
 
+.btn-skip-exercise {
+  width: 100%; padding: 12px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-dim);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  border-radius: 10px; margin-top: 10px; transition: all .2s;
+}
+.btn-skip-exercise:hover { background: var(--surface2); color: var(--text); }
+.btn-skip-exercise:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2px; }
+
+.summary-exercise.skipped { opacity: 0.55; }
+.summary-exercise.skipped .name { text-decoration: line-through; }
+
+/* ========== EDIT MINI-SET ROWS ========== */
+.edit-mini-set-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 1fr 32px;
+  gap: 8px; align-items: end;
+  margin-bottom: 8px;
+}
+.edit-mini-set-row .form-group { margin: 0; }
+.edit-mini-set-row .form-group label { font-size: 10px; }
+.edit-mini-set-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent); color: white;
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  align-self: center;
+}
+.edit-mini-remove {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--red); font-size: 14px; cursor: pointer;
+  align-self: center;
+}
+.edit-mini-remove:hover { background: rgba(225,112,85,.15); }
+
 /* ========== TIMER OVERLAY ========== */
 .timer-overlay {
   display: none; position: fixed; inset: 0; z-index: 300;
@@ -294,6 +334,12 @@ body {
   color: var(--green);
 }
 .exercise-nav-pill.done::before { content: '✓ '; }
+.exercise-nav-pill.skipped {
+  background: var(--surface); border-color: var(--border);
+  color: var(--text-dim); opacity: 0.6;
+  text-decoration: line-through;
+}
+.exercise-nav-pill.skipped::before { content: '⏭ '; }
 
 /* ========== LAST SESSION INFO BOX ========== */
 .last-info-box {

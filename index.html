@@ -2,7 +2,15 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f1117">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FitTrack">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>FitTrack – Myo-Rep Tracker</title>
 <link rel="stylesheet" href="style.css">
 <script src="chart.min.js"></script>
@@ -25,12 +33,21 @@
 
 <!-- ========== EDIT ENTRY MODAL ========== -->
 <div class="modal-overlay" id="edit-modal" role="dialog" aria-modal="true" aria-label="Eintrag bearbeiten">
-  <div class="modal">
+  <div class="modal modal-wide">
     <h2>Eintrag bearbeiten</h2>
-    <div class="form-grid form-grid-3" style="text-align:left; margin:16px 0">
-      <div class="form-group"><label for="edit-weight">Gewicht</label><input type="number" id="edit-weight" step="0.5"></div>
-      <div class="form-group"><label for="edit-ss-reps">SS Reps</label><input type="number" id="edit-ss-reps"></div>
-      <div class="form-group"><label for="edit-total-reps">Mini Total</label><input type="number" id="edit-total-reps"></div>
+    <div style="text-align:left; margin:16px 0">
+      <div class="form-group" style="margin-bottom:10px">
+        <label style="font-weight:600; color:var(--orange)">Start Set</label>
+      </div>
+      <div class="form-grid form-grid-2">
+        <div class="form-group"><label for="edit-weight">SS Gewicht (kg)</label><input type="number" id="edit-weight" step="0.5"></div>
+        <div class="form-group"><label for="edit-ss-reps">SS Reps</label><input type="number" id="edit-ss-reps"></div>
+      </div>
+      <div class="form-group" style="margin-top:14px; margin-bottom:8px">
+        <label style="font-weight:600; color:var(--accent-light)">Mini-Sets</label>
+      </div>
+      <div id="edit-mini-sets-list"></div>
+      <button type="button" class="btn btn-secondary" onclick="addEditMiniSet()" style="width:100%; margin-top:8px">+ Mini-Set hinzufügen</button>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeEditModal()">Abbrechen</button>
@@ -217,6 +234,11 @@
       <button class="btn-save-set accent" id="wo-next-btn" onclick="nextExercise()" style="display:none; margin-top:8px">
         NÄCHSTE ÜBUNG →
       </button>
+
+      <!-- SKIP EXERCISE BUTTON -->
+      <button class="btn-skip-exercise" id="wo-skip-btn" onclick="skipExercise()">
+        ⏭ Übung überspringen
+      </button>
     </div>
   </div>
 </div>
@@ -316,6 +338,10 @@
       <div class="form-group">
         <label for="ex-name">Name</label>
         <input type="text" id="ex-name" style="text-align:left" placeholder="z.B. Bench Press">
+      </div>
+      <div class="form-group">
+        <label for="ex-muscles">Muskelgruppen</label>
+        <input type="text" id="ex-muscles" style="text-align:left" placeholder="z.B. Brust, Trizeps, vorderer Delta">
       </div>
       <div class="form-grid form-grid-2">
         <div class="form-group">

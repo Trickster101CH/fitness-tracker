@@ -20,17 +20,17 @@ function playTimerSignal() {
 
 // ========== EXERCISE & PLAN DATA ==========
 const DEFAULT_EXERCISES = {
-  incline_db:      { name: 'Incline Dumbbell Press', workout: 'A', order: 1, ss: 20, current: 22, icon: '🏋️', invertProgress: false },
-  barbell_row:     { name: 'Barbell Row',            workout: 'A', order: 2, ss: 10, current: 15, icon: '🏋️', invertProgress: false },
-  db_high_pull:    { name: 'Dumbbell High Pull Ups', workout: 'A', order: 3, ss: 12, current: 12, icon: '💪', invertProgress: false },
-  pjr_pullover:    { name: 'PJR Pull Overs',         workout: 'A', order: 4, ss: 18, current: 24, icon: '🏋️', invertProgress: false },
-  goblet_squat:    { name: 'Goblet Squats',          workout: 'A', order: 5, ss: 12, current: 12, icon: '🦵', invertProgress: false },
-  barbell_rdl:     { name: 'Barbell RDL',             workout: 'A', order: 6, ss: 10, current: 15, icon: '🦵', invertProgress: false },
-  dips:            { name: 'Dips (Assisted)',         workout: 'B', order: 1, ss: 75, current: 54, icon: '💪', invertProgress: true },
-  cable_row_1arm:  { name: 'One Arm High Cable Row',  workout: 'B', order: 2, ss: 30, current: 45, icon: '🏋️', invertProgress: false },
-  cable_lateral:   { name: 'Cable Lateral Raise',     workout: 'B', order: 3, ss: 7,  current: 16, icon: '🔄', invertProgress: false },
-  barbell_curl:    { name: 'Barbell Curls',           workout: 'B', order: 4, ss: 7.5, current: 10, icon: '💪', invertProgress: false },
-  tricep_pushdown: { name: 'Tricep Cable Push Down',  workout: 'B', order: 5, ss: 40, current: 60, icon: '💪', invertProgress: false },
+  incline_db:      { name: 'Incline Dumbbell Press', workout: 'A', order: 1, ss: 20, current: 22, icon: '🏋️', invertProgress: false, muscles: 'Obere Brust, vorderer Delta, Trizeps' },
+  barbell_row:     { name: 'Barbell Row',            workout: 'A', order: 2, ss: 10, current: 15, icon: '🏋️', invertProgress: false, muscles: 'Lat, Rhomboiden, hinterer Delta, Bizeps' },
+  db_high_pull:    { name: 'Dumbbell High Pull Ups', workout: 'A', order: 3, ss: 12, current: 12, icon: '💪', invertProgress: false, muscles: 'Hinterer Delta, Trapez, Rhomboiden' },
+  pjr_pullover:    { name: 'PJR Pull Overs',         workout: 'A', order: 4, ss: 18, current: 24, icon: '🏋️', invertProgress: false, muscles: 'Lat, langer Trizeps, untere Brust' },
+  goblet_squat:    { name: 'Goblet Squats',          workout: 'A', order: 5, ss: 12, current: 12, icon: '🦵', invertProgress: false, muscles: 'Quadrizeps, Gluteus, Adduktoren, Core' },
+  barbell_rdl:     { name: 'Barbell RDL',            workout: 'A', order: 6, ss: 10, current: 15, icon: '🦵', invertProgress: false, muscles: 'Hamstrings, Gluteus, unterer Rücken' },
+  dips:            { name: 'Dips (Assisted)',        workout: 'B', order: 1, ss: 75, current: 54, icon: '💪', invertProgress: true,  muscles: 'Untere Brust, Trizeps, vorderer Delta' },
+  cable_row_1arm:  { name: 'One Arm High Cable Row', workout: 'B', order: 2, ss: 30, current: 45, icon: '🏋️', invertProgress: false, muscles: 'Lat, Rhomboiden, hinterer Delta, Bizeps' },
+  cable_lateral:   { name: 'Cable Lateral Raise',    workout: 'B', order: 3, ss: 7,  current: 16, icon: '🔄', invertProgress: false, muscles: 'Mittlerer Delta' },
+  barbell_curl:    { name: 'Barbell Curls',          workout: 'B', order: 4, ss: 7.5, current: 10, icon: '💪', invertProgress: false, muscles: 'Bizeps, Brachialis, Unterarme' },
+  tricep_pushdown: { name: 'Tricep Cable Push Down', workout: 'B', order: 5, ss: 40, current: 60, icon: '💪', invertProgress: false, muscles: 'Trizeps (alle Köpfe)' },
 };
 
 // Dynamic exercises — loaded from localStorage, falls back to defaults
@@ -39,7 +39,16 @@ let EXERCISES = loadExercises();
 function loadExercises() {
   try {
     const saved = localStorage.getItem('fittrack_exercises');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Migrate: backfill muscles field from defaults if missing
+      Object.keys(parsed).forEach(id => {
+        if (!parsed[id].muscles && DEFAULT_EXERCISES[id]) {
+          parsed[id].muscles = DEFAULT_EXERCISES[id].muscles;
+        }
+      });
+      return parsed;
+    }
   } catch (e) { /* ignore */ }
   return JSON.parse(JSON.stringify(DEFAULT_EXERCISES));
 }
@@ -82,6 +91,28 @@ function saveMeta() {
 
 let history = loadHistory();
 let meta = loadMeta();
+
+// ========== ACTIVE WORKOUT PERSISTENCE ==========
+function saveActiveWorkout() {
+  try {
+    if (activeWorkout) {
+      localStorage.setItem('fittrack_active', JSON.stringify({ activeWorkout, workoutLog }));
+    } else {
+      localStorage.removeItem('fittrack_active');
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function loadActiveWorkout() {
+  try {
+    const saved = localStorage.getItem('fittrack_active');
+    if (saved) {
+      const data = JSON.parse(saved);
+      return data;
+    }
+  } catch (e) { /* ignore */ }
+  return null;
+}
 
 // ========== MODAL ==========
 let modalCallback = null;
@@ -182,6 +213,29 @@ function getSuggestion(exId) {
   if (h.length === 0) return { weight: ex.current, action: 'start', text: 'Erste Session – starte mit aktuellem Gewicht.' };
   const last = h[h.length - 1];
 
+  // Analyze mini-set weight progression: if user pushed weight beyond SS during mini-sets,
+  // and last mini-set still had ≥ weightUpThreshold reps, the SS weight is too low
+  let miniSetMaxWeight = last.weight;
+  let lastMiniSetStrong = false;
+  if (last.sets && last.sets.length > 0) {
+    last.sets.forEach(s => {
+      if (typeof s === 'object' && s.weight != null) {
+        if (ex.invertProgress) {
+          if (s.weight < miniSetMaxWeight) miniSetMaxWeight = s.weight;
+        } else {
+          if (s.weight > miniSetMaxWeight) miniSetMaxWeight = s.weight;
+        }
+      }
+    });
+    const lastSet = last.sets[last.sets.length - 1];
+    if (typeof lastSet === 'object' && lastSet.reps >= RULES.weightUpThreshold) {
+      lastMiniSetStrong = true;
+    }
+  }
+  const miniSetPushed = ex.invertProgress
+    ? miniSetMaxWeight < last.weight
+    : miniSetMaxWeight > last.weight;
+
   if (last.startSetReps <= RULES.weightUpThreshold && !ex.invertProgress) {
     return {
       weight: last.weight, action: 'hold',
@@ -190,11 +244,30 @@ function getSuggestion(exId) {
   }
   if (last.startSetReps >= RULES.startSetTarget) {
     const increment = ex.invertProgress ? -2.5 : 2.5;
-    const newWeight = +(last.weight + increment).toFixed(1);
+    let newWeight = +(last.weight + increment).toFixed(1);
+    let bonusText = '';
+    // Bonus boost: if mini-sets pushed weight even higher AND last mini-set was still strong,
+    // jump straight to that higher weight
+    if (miniSetPushed && lastMiniSetStrong) {
+      const pushedWeight = ex.invertProgress
+        ? Math.min(newWeight, miniSetMaxWeight)
+        : Math.max(newWeight, miniSetMaxWeight);
+      if (pushedWeight !== newWeight) {
+        newWeight = pushedWeight;
+        bonusText = ' (Mini-Sets waren stark → Sprung)';
+      }
+    }
     const dir = ex.invertProgress ? 'weniger Unterstützung' : 'Gewicht steigern';
     return {
       weight: newWeight, action: 'increase',
-      text: `Letztes SS: ${last.startSetReps} Reps – ${dir}! <strong>${newWeight} kg</strong>`
+      text: `Letztes SS: ${last.startSetReps} Reps – ${dir}!${bonusText} <strong>${newWeight} kg</strong>`
+    };
+  }
+  // 8-12 SS reps: hold weight, but if mini-sets pushed higher, suggest the pushed weight
+  if (miniSetPushed && lastMiniSetStrong) {
+    return {
+      weight: miniSetMaxWeight, action: 'progress',
+      text: `Letztes SS: ${last.startSetReps} Reps. Mini-Sets erreichten <strong>${miniSetMaxWeight}kg</strong> – versuche heute direkt damit zu starten.`
     };
   }
   return {
@@ -311,6 +384,7 @@ function renderExerciseList(workout, containerId) {
           <div class="exercise-name">${ex.name}
             ${sug.action === 'increase' ? '<span class="weight-up-badge">↑ STEIGERN</span>' : ''}
           </div>
+          ${ex.muscles ? `<div class="exercise-muscles">${ex.muscles}</div>` : ''}
           <div class="exercise-meta">
             SS: ${ex.ss}kg → Aktuell: ${ex.current}kg
             ${progress !== 0 ? ` · <span style="color:${progressColor}">${progress > 0 ? '+' : ''}${progress}%</span>` : ''}
@@ -443,7 +517,13 @@ function showExerciseDetail(exId) {
       },
       scales: {
         x: { stacked: true, ticks: { color: '#8892a4' }, grid: { display: false } },
-        y: { stacked: true, min: 0, ticks: { color: '#8892a4' }, grid: { color: 'rgba(45,50,68,.5)' } }
+        y: {
+          stacked: true,
+          min: 0,
+          suggestedMax: 32,
+          ticks: { color: '#8892a4', stepSize: 5 },
+          grid: { color: 'rgba(45,50,68,.5)' }
+        }
       }
     }
   });
@@ -515,8 +595,54 @@ function editEntry(exId, idx) {
   const entry = history[exId][idx];
   document.getElementById('edit-weight').value = entry.weight;
   document.getElementById('edit-ss-reps').value = entry.startSetReps;
-  document.getElementById('edit-total-reps').value = entry.miniSetTotal !== undefined ? entry.miniSetTotal : (entry.totalReps || 20);
+  // Build mini-set rows
+  const miniSets = (entry.sets || []).map(s =>
+    typeof s === 'object' ? { reps: s.reps, weight: s.weight } : { reps: s, weight: entry.weight }
+  );
+  renderEditMiniSets(miniSets);
   document.getElementById('edit-modal').classList.add('active');
+}
+
+function renderEditMiniSets(miniSets) {
+  const container = document.getElementById('edit-mini-sets-list');
+  container.innerHTML = miniSets.map((s, i) => `
+    <div class="edit-mini-set-row" data-idx="${i}">
+      <div class="edit-mini-set-num">${i + 1}</div>
+      <div class="form-group">
+        <label>Reps</label>
+        <input type="number" class="edit-mini-reps" value="${s.reps}" min="0">
+      </div>
+      <div class="form-group">
+        <label>kg</label>
+        <input type="number" class="edit-mini-weight" value="${s.weight}" step="0.5" min="0">
+      </div>
+      <button type="button" class="edit-mini-remove" onclick="removeEditMiniSet(${i})" aria-label="Mini-Set entfernen">✕</button>
+    </div>
+  `).join('');
+}
+
+function getEditMiniSetsFromDOM() {
+  const rows = document.querySelectorAll('#edit-mini-sets-list .edit-mini-set-row');
+  const result = [];
+  rows.forEach(row => {
+    const reps = parseInt(row.querySelector('.edit-mini-reps').value) || 0;
+    const weight = parseFloat(row.querySelector('.edit-mini-weight').value) || 0;
+    if (reps > 0) result.push({ reps, weight });
+  });
+  return result;
+}
+
+function addEditMiniSet() {
+  const current = getEditMiniSetsFromDOM();
+  const ssWeight = parseFloat(document.getElementById('edit-weight').value) || 0;
+  current.push({ reps: 4, weight: ssWeight });
+  renderEditMiniSets(current);
+}
+
+function removeEditMiniSet(idx) {
+  const current = getEditMiniSetsFromDOM();
+  current.splice(idx, 1);
+  renderEditMiniSets(current);
 }
 
 function closeEditModal() {
@@ -530,8 +656,12 @@ function saveEditEntry() {
   const entry = history[editingExId][editingIdx];
   entry.weight = parseFloat(document.getElementById('edit-weight').value);
   entry.startSetReps = parseInt(document.getElementById('edit-ss-reps').value);
-  entry.miniSetTotal = parseInt(document.getElementById('edit-total-reps').value);
-  entry.volume = (entry.miniSetTotal + entry.startSetReps) * entry.weight;
+  const miniSets = getEditMiniSetsFromDOM();
+  entry.sets = miniSets;
+  entry.miniSetTotal = miniSets.reduce((sum, s) => sum + s.reps, 0);
+  // Recalculate volume
+  const miniSetVolume = miniSets.reduce((sum, s) => sum + s.reps * s.weight, 0);
+  entry.volume = entry.startSetReps * entry.weight + miniSetVolume;
   saveHistory();
   closeEditModal();
   showExerciseDetail(editingExId);
@@ -554,6 +684,17 @@ let woCurrentReps = 12;
 let workoutLog = [];
 
 function startWorkout() {
+  // Try to load saved active workout from localStorage
+  if (!activeWorkout) {
+    const saved = loadActiveWorkout();
+    if (saved && saved.activeWorkout) {
+      activeWorkout = saved.activeWorkout;
+      workoutLog = saved.workoutLog || [];
+      // Restore stepper values from saved state
+      woCurrentWeight = activeWorkout._woCurrentWeight || 0;
+      woCurrentReps = activeWorkout._woCurrentReps || RULES.startSetTarget;
+    }
+  }
   // If a workout is already active, resume it instead of restarting
   if (activeWorkout) {
     showPage('page-workout');
@@ -614,16 +755,18 @@ function loadExerciseIntoWorkout() {
 function renderExerciseNav() {
   if (!activeWorkout) return;
   const nav = document.getElementById('exercise-nav');
-  const doneIds = new Set(workoutLog.map(l => l.exId));
+  const skippedIds = new Set(workoutLog.filter(l => l.skipped).map(l => l.exId));
+  const doneIds = new Set(workoutLog.filter(l => !l.skipped).map(l => l.exId));
   nav.innerHTML = activeWorkout.exercises.map((id, i) => {
     const ex = EXERCISES[id];
     const isActive = i === activeWorkout.exerciseIndex;
     const isDone = doneIds.has(id);
-    const shortName = ex.name.split(' ').slice(0, 2).join(' ');
+    const isSkipped = skippedIds.has(id);
     let cls = 'exercise-nav-pill';
     if (isActive) cls += ' active';
     else if (isDone) cls += ' done';
-    return `<button class="${cls}" onclick="jumpToExercise(${i})">${shortName}</button>`;
+    else if (isSkipped) cls += ' skipped';
+    return `<button class="${cls}" onclick="jumpToExercise(${i})">${ex.name}</button>`;
   }).join('');
   // Scroll active pill into view
   const activePill = nav.querySelector('.active');
@@ -689,6 +832,10 @@ function renderLastSessionInfo(exId) {
 
 function renderWorkoutState() {
   if (!activeWorkout) return;
+  // Persist current stepper values for reload
+  activeWorkout._woCurrentWeight = woCurrentWeight;
+  activeWorkout._woCurrentReps = woCurrentReps;
+  saveActiveWorkout();
   const isStartSet = !activeWorkout.startSetDone;
   const done = activeWorkout.miniSetTotal >= RULES.miniSetRepsTarget;
   const remaining = RULES.miniSetRepsTarget - activeWorkout.miniSetTotal;
@@ -780,14 +927,18 @@ function renderWorkoutState() {
   }
 
   if (done) {
-    const doneIds = new Set(workoutLog.map(l => l.exId));
+    const handledIds = new Set(workoutLog.map(l => l.exId));
     // Check if this is the last undone exercise
     const remainingUndone = activeWorkout.exercises.filter((id, i) =>
-      i !== activeWorkout.exerciseIndex && !doneIds.has(id)
+      i !== activeWorkout.exerciseIndex && !handledIds.has(id)
     );
     const isLast = remainingUndone.length === 0;
     document.getElementById('wo-next-btn').textContent = isLast ? '🏁 WORKOUT BEENDEN' : 'NÄCHSTE ÜBUNG →';
   }
+
+  // Hide skip button if exercise is already in progress (sets logged)
+  const hasProgress = activeWorkout.startSetDone || activeWorkout.currentMiniSets.length > 0;
+  document.getElementById('wo-skip-btn').style.display = (hasProgress || done) ? 'none' : '';
 }
 
 function adjustWeight(delta) {
@@ -846,6 +997,52 @@ function logSet() {
   }
 }
 
+function skipExercise() {
+  if (!activeWorkout) return;
+  showModal(
+    'Übung überspringen?',
+    'Diese Übung wird übersprungen und nicht gespeichert.',
+    'Überspringen',
+    () => {
+      const exId = activeWorkout.exercises[activeWorkout.exerciseIndex];
+      // Mark as skipped in workoutLog so nav can grey it out
+      workoutLog.push({ exId, skipped: true });
+
+      if (activeWorkout.exerciseIndex >= activeWorkout.exercises.length - 1) {
+        // Check if there are still undone exercises before summary
+        const doneOrSkipped = new Set(workoutLog.map(l => l.exId));
+        const remaining = activeWorkout.exercises.filter(id => !doneOrSkipped.has(id));
+        if (remaining.length === 0) {
+          showWorkoutSummary();
+          return;
+        }
+        // Jump to first remaining
+        activeWorkout.exerciseIndex = activeWorkout.exercises.indexOf(remaining[0]);
+        loadExerciseIntoWorkout();
+        return;
+      }
+      // Find next undone exercise
+      const doneIds = new Set(workoutLog.map(l => l.exId));
+      let nextIdx = activeWorkout.exerciseIndex + 1;
+      while (nextIdx < activeWorkout.exercises.length && doneIds.has(activeWorkout.exercises[nextIdx])) {
+        nextIdx++;
+      }
+      if (nextIdx >= activeWorkout.exercises.length) {
+        // Loop back to find any unskipped earlier
+        const remaining = activeWorkout.exercises.filter(id => !doneIds.has(id));
+        if (remaining.length === 0) {
+          showWorkoutSummary();
+          return;
+        }
+        activeWorkout.exerciseIndex = activeWorkout.exercises.indexOf(remaining[0]);
+      } else {
+        activeWorkout.exerciseIndex = nextIdx;
+      }
+      loadExerciseIntoWorkout();
+    }
+  );
+}
+
 function nextExercise() {
   const exId = activeWorkout.exercises[activeWorkout.exerciseIndex];
   if (!history[exId]) history[exId] = [];
@@ -877,20 +1074,21 @@ function nextExercise() {
 
   workoutLog.push({ exId, ...entry });
 
-  if (activeWorkout.exerciseIndex >= activeWorkout.exercises.length - 1) {
+  // Find next exercise that hasn't been done or skipped yet
+  const handledIds = new Set(workoutLog.map(l => l.exId));
+  const remainingExs = activeWorkout.exercises.filter(id => !handledIds.has(id));
+  if (remainingExs.length === 0) {
     showWorkoutSummary();
     return;
   }
-  // Find next exercise that hasn't been done yet, or just go to next
-  const doneIds = new Set(workoutLog.map(l => l.exId));
+  // Prefer next in order after current index
   let nextIdx = activeWorkout.exerciseIndex + 1;
-  // Skip already completed exercises
-  while (nextIdx < activeWorkout.exercises.length && doneIds.has(activeWorkout.exercises[nextIdx])) {
+  while (nextIdx < activeWorkout.exercises.length && handledIds.has(activeWorkout.exercises[nextIdx])) {
     nextIdx++;
   }
   if (nextIdx >= activeWorkout.exercises.length) {
-    showWorkoutSummary();
-    return;
+    // Wrap around to first remaining
+    nextIdx = activeWorkout.exercises.indexOf(remainingExs[0]);
   }
   activeWorkout.exerciseIndex = nextIdx;
   loadExerciseIntoWorkout();
@@ -910,6 +1108,8 @@ function endWorkout() {
   meta.lastWorkoutDate = new Date().toISOString().split('T')[0];
   saveMeta();
   activeWorkout = null;
+  workoutLog = [];
+  saveActiveWorkout();
   showPage('page-dashboard');
   setNav(document.getElementById('nav-home'));
   renderDashboard();
@@ -924,17 +1124,27 @@ function showWorkoutSummary() {
 
   const type = activeWorkout.type;
   activeWorkout = null;
+  saveActiveWorkout();
 
   document.getElementById('summary-subtitle').textContent =
     `Workout ${type} · ${new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}`;
 
-  document.getElementById('summary-exercises').textContent = workoutLog.length;
+  const completedLog = workoutLog.filter(l => !l.skipped);
+  document.getElementById('summary-exercises').textContent = completedLog.length;
 
   let totalVolume = 0;
   let weightIncreases = 0;
 
   const listHtml = workoutLog.map(log => {
     const ex = EXERCISES[log.exId];
+    if (log.skipped) {
+      return `<div class="summary-exercise skipped">
+        <div>
+          <div class="name">${ex.name}</div>
+          <div class="summary-detail">⏭ Übersprungen</div>
+        </div>
+      </div>`;
+    }
     totalVolume += log.volume;
     const h = history[log.exId] || [];
     if (h.length >= 2) {
@@ -1288,6 +1498,7 @@ function openAddExercise() {
   editingExerciseId = null;
   document.getElementById('exercise-modal-title').textContent = 'Übung hinzufügen';
   document.getElementById('ex-name').value = '';
+  document.getElementById('ex-muscles').value = '';
   document.getElementById('ex-workout').value = 'A';
   document.getElementById('ex-icon').value = '🏋️';
   document.getElementById('ex-start-weight').value = '10';
@@ -1301,6 +1512,7 @@ function openEditExercise(id) {
   const ex = EXERCISES[id];
   document.getElementById('exercise-modal-title').textContent = 'Übung bearbeiten';
   document.getElementById('ex-name').value = ex.name;
+  document.getElementById('ex-muscles').value = ex.muscles || '';
   document.getElementById('ex-workout').value = ex.workout;
   document.getElementById('ex-icon').value = ex.icon;
   document.getElementById('ex-start-weight').value = ex.ss;
@@ -1316,6 +1528,7 @@ function closeExerciseModal() {
 
 function saveExercise() {
   const name = document.getElementById('ex-name').value.trim();
+  const muscles = document.getElementById('ex-muscles').value.trim();
   const workout = document.getElementById('ex-workout').value;
   const icon = document.getElementById('ex-icon').value;
   const ss = parseFloat(document.getElementById('ex-start-weight').value);
@@ -1333,6 +1546,7 @@ function saveExercise() {
     // Edit existing
     const ex = EXERCISES[editingExerciseId];
     ex.name = name;
+    ex.muscles = muscles;
     ex.workout = workout;
     ex.icon = icon;
     ex.ss = ss;
@@ -1342,7 +1556,7 @@ function saveExercise() {
     // Create new — generate ID from name
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '');
     const uniqueId = EXERCISES[id] ? id + '_' + Date.now() : id;
-    EXERCISES[uniqueId] = { name, workout, order: maxOrder + 1, ss, current, icon, invertProgress };
+    EXERCISES[uniqueId] = { name, muscles, workout, order: maxOrder + 1, ss, current, icon, invertProgress };
   }
 
   saveExercises();
@@ -1367,4 +1581,21 @@ function deleteExercise(id) {
 }
 
 // ========== INIT ==========
+// Restore active workout from localStorage if present
+(function initActiveWorkout() {
+  const saved = loadActiveWorkout();
+  if (saved && saved.activeWorkout) {
+    activeWorkout = saved.activeWorkout;
+    workoutLog = saved.workoutLog || [];
+    woCurrentWeight = activeWorkout._woCurrentWeight || 0;
+    woCurrentReps = activeWorkout._woCurrentReps || RULES.startSetTarget;
+  }
+})();
 renderDashboard();
+
+// ========== PWA SERVICE WORKER ==========
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* ignore */ });
+  });
+}
